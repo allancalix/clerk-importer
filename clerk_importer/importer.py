@@ -75,12 +75,13 @@ class Importer(importer.ImporterProtocol):
         default_start = now - datetime.timedelta(days=14)
         start = config.get("start", default_start.isoformat())
         end = config.get("end", now.isoformat())
+        perform_sync = config.get("perform_sync", False) or self.perform_sync
 
-        if self.perform_sync:
-            try_sync(f"{self.clerk_bin} --config {self.clerk_conf} txn sync --begin {start} --until {end}")
+        if perform_sync:
+            try_sync(f"{self.clerk_bin} --config {self.clerk_conf} txn sync")
 
         con = sqlite3.connect(self.clerk_db)
-        rows = con.execute(f"SELECT source FROM transactions WHERE date BETWEEN date(\"{start}\") AND date(\"{end}\")").fetchall()
+        rows = con.execute(f"SELECT source, JSON_EXTRACT(source, '$.date') as date FROM transactions WHERE date BETWEEN date(\"{start}\") AND date(\"{end}\")").fetchall()
 
         meta = data.new_metadata(file.name, 0)
 
